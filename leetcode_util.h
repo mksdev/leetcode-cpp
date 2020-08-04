@@ -217,8 +217,6 @@ class TestRunner {
     std::function<void(TestCase&, test_output_t&)> cleanup_cb_;
 
     std::vector<TestCase> test_cases_;
-    Solution solution_;
-
 public:
 
     /**
@@ -258,6 +256,8 @@ public:
      * @return
      */
     int run(std::size_t repeate_time = 1) {
+
+        // check that all neccessary callback were provided
         auto prepare_fn = prepare_test_case_fn_;
         if(!prepare_fn) {
             std::cerr << "no prepare function set\n";
@@ -275,24 +275,33 @@ public:
         }
         auto cleanup_fn = cleanup_cb_;
 
+        // get user provided test cases
         prepare_fn(test_cases_);
         std::size_t valid_tests = 0;
         auto total_tests = test_cases_.size();
 
         auto start = std::chrono::high_resolution_clock::now();
         if(!test_cases_.empty()) {
+            // iterate all test cases obtained in prepare()
             std::for_each(test_cases_.begin(), test_cases_.end(), [&](TestCase& test){
-
+                // runtime accumulator
                 std::chrono::duration<long long int, std::nano> run_time{0};
 
+                // check if all repeated tests has been successful
                 auto all_valid = true;
+
+                // save only unique printable output of each test
                 std::set<std::string> outputs_print;
 
                 // run the same test case repeatedly co obtain average runtime
                 for(std::size_t i = 0; i != repeate_time; ++i) {
+                    // initialise Solution implementation
+                    // in case of use internal variables we need to have clean start at each test
+                    // TODO: run multiple tests in thread pool since they are independent
+                    Solution solution;
                     // execute and save runtime
                     auto start_exec = clock::now();
-                    auto output = execute_fn(test, solution_);
+                    auto output = execute_fn(test, solution);
                     auto end_exec = clock::now();
                     run_time += end_exec - start_exec;
 
